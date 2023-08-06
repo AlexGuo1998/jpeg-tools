@@ -334,6 +334,41 @@ def optimize_table(im, option=HuffTree.GenerateOption.sort_same_length_by_code):
             marker.update_data()
 
 
+def decrypt_comibushi(filename, filename_out):
+    with open(filename, 'rb') as f:
+        data = f.read()
+    im = JpegImage()
+    im.load(data)
+
+    im.decode_dct_data()
+
+    # restore the data
+    for ch in im.dct_data:
+        y = len(ch)
+        x = len(ch[0])
+        y_shuffle = y // 4
+        x_shuffle = x // 4
+
+        new = [[[] for _ in range(x)] for _ in range(y)]
+        for yy in range(y):
+            y1, y2 = divmod(yy, y_shuffle)
+            for xx in range(x):
+                x1, x2 = divmod(xx, x_shuffle)
+                # only process 0123
+                if y1 >= 4 or x1 >= 4:
+                    new[yy][xx] = ch[yy][xx]
+                else:
+                    new[yy][xx] = ch[x1 * y_shuffle + y2][y1 * x_shuffle + x2]
+
+        ch[:] = new
+
+    optimize_table(im)
+    im.encode_dct_data()
+
+    with open(filename_out, 'wb') as f:
+        im.dump_file(f)
+
+
 def test():
     filename = 'test.jpg'
     with open(filename, 'rb') as f:
