@@ -203,13 +203,21 @@ class DHTMarker(Marker, register_marker=b'\xFF\xC4'):
                 if li == 0:
                     vi = ()
                 else:
-                    vi = struct.unpack('>' + 'B' * li, self.data[i:i + li])
+                    vi = struct.unpack(f'>{li:d}B', self.data[i:i + li])
                 i += li
                 v.append(vi)
             self.tables.append((tc, th, v))
 
     def update_data(self):
-        raise NotImplementedError
+        data = []
+        for tc, th, v in self.tables:
+            tc_th = (tc << 4) | th
+            data.append(struct.pack('>B16B', tc_th, *(len(vi) for vi in v)))
+            for vi in v:
+                if not vi:
+                    continue
+                data.append(struct.pack(f'>{len(vi):d}B', *vi))
+        self.data = b''.join(data)
 
     def __str__(self):
         name, desc = self.marker_name_description
